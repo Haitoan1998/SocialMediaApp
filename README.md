@@ -164,3 +164,5 @@ export default {
 - create react-query folder
   in queriesAndMutations.ts (config react query)
   ![signup form](./src/lib/react-query/queriesAndMutations.ts)
+
+- npm i react-dropzone
