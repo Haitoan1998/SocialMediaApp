@@ -1,4 +1,4 @@
-import { ID, ImageGravity, Query } from "appwrite";
+import { ID, Query } from "appwrite";
 
 import { INewPost, INewUser } from "@/types";
 import { account, appwriteConfig, avatars, databases, storage } from "./config";
@@ -61,10 +61,7 @@ export async function saveUserToDB(user: {
 //singin
 export async function signInAccount(user: { email: string; password: string }) {
   try {
-    const session = await account.createEmailPasswordSession(
-      user.email,
-      user.password
-    );
+    const session = await account.createEmailSession(user.email, user.password);
     return session;
   } catch (error) {
     console.log(error);
@@ -89,13 +86,12 @@ export async function getCurrentUser() {
 
     const currentUser: any = await databases.listDocuments(
       appwriteConfig.databasesId,
-      appwriteConfig.userCollectionId
-      // [
-      //   Query.equal("title", ["Avatar", "Lord of the Rings"]),
-      //   Query.greaterThan("year", 1999),
-      // ]
+      appwriteConfig.userCollectionId,
+      [Query.equal("accountId", currentAccount.$id)]
     );
-    // if (!currentUser) throw Error;
+
+    if (!currentUser) throw Error;
+
     return currentUser.documents[0];
   } catch (error) {
     console.log(error);
@@ -136,7 +132,7 @@ export function getFilePreview(fileId: string) {
       fileId,
       2000, //width
       2000, //height
-      ImageGravity.Top, //cắt ảnh ở đâu
+      "top", //cắt ảnh ở đâu
       100 // chất lượng hình ảnh
     );
 
@@ -197,6 +193,23 @@ export async function createPost(post: INewPost) {
     }
 
     return newPost;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+//lấy bài viết mới nhất
+export async function getRecentPosts() {
+  try {
+    const posts = await databases.listDocuments(
+      appwriteConfig.databasesId,
+      appwriteConfig.postCollectionId,
+      [Query.orderDesc("$createdAt"), Query.limit(20)]
+    );
+
+    if (!posts) throw Error;
+
+    return posts;
   } catch (error) {
     console.log(error);
   }

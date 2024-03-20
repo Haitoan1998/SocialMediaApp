@@ -9,6 +9,7 @@ import {
 import {
   createPost,
   createUserAccount,
+  getRecentPosts,
   signInAccount,
   signOutAccount,
 } from "../appwrite/api";
@@ -52,5 +53,14 @@ export const useCreatePost = () => {
         queryKey: [QUERY_KEYS.GET_RECENT_POSTS], //cho biết rằng truy vấn lấy các bài viết gần đây là ko hợp lệ và gọi lại fn để làm mới
       });
     },
+  });
+};
+
+//Hook này sử dụng hook useMutation từ thư viện React Query để thực hiện một thay đổi dữ liệu, cụ thể là lấy bài post mới nhất
+export const useGetRecentPosts = () => {
+  //useQuery trong React Query là một hook được cung cấp bởi thư viện React Query để thực hiện các truy vấn dữ liệu trong ứng dụng React
+  return useQuery({
+    queryKey: [QUERY_KEYS.GET_RECENT_POSTS], //xác định khóa của truy vấn
+    queryFn: getRecentPosts,
   });
 };
