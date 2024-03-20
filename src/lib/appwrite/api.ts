@@ -1,7 +1,7 @@
-import { ID, Query } from "appwrite";
+import { ID, ImageGravity, Query } from "appwrite";
 
-import { INewUser } from "@/types";
-import { account, appwriteConfig, avatars, databases } from "./config";
+import { INewPost, INewUser } from "@/types";
+import { account, appwriteConfig, avatars, databases, storage } from "./config";
 import { toast } from "@/components/ui/use-toast";
 
 //create account
@@ -108,6 +108,95 @@ export async function signOutAccount() {
   try {
     const session = await account.deleteSession("current");
     return session;
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// ============================== UPLOAD FILE
+export async function uploadFile(file: File) {
+  try {
+    const uploadedFile = await storage.createFile(
+      appwriteConfig.storageId, //id của bucket
+      ID.unique(), // id duy nhất appwrite
+      file // file cần tạo
+    );
+
+    return uploadedFile;
+  } catch (error) {
+    console.log(error);
+  }
+}
+// ============================== GET FILE URL
+export function getFilePreview(fileId: string) {
+  try {
+    const fileUrl = storage.getFilePreview(
+      //xem trước tập tin vừa tạo trả về Url ảnh
+      appwriteConfig.storageId, //id của bucket
+      fileId,
+      2000, //width
+      2000, //height
+      ImageGravity.Top, //cắt ảnh ở đâu
+      100 // chất lượng hình ảnh
+    );
+
+    if (!fileUrl) throw Error;
+
+    return fileUrl;
+  } catch (error) {
+    console.log(error);
+  }
+}
+// ============================== DELETE FILE
+export async function deleteFile(fileId: string) {
+  try {
+    //xóa file bằng id của nó
+    await storage.deleteFile(appwriteConfig.storageId, fileId);
+
+    return { status: "ok" };
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+//create post
+export async function createPost(post: INewPost) {
+  try {
+    // Upload file to appwrite storage
+    const uploadedFile = await uploadFile(post.file[0]);
+    if (!uploadedFile) throw Error;
+
+    // Get file url
+    const fileUrl = getFilePreview(uploadedFile.$id); //lấy ra THÔNG TIN url file vừa tạo
+    if (!fileUrl) {
+      await deleteFile(uploadedFile.$id); // nếu ko có thì xóa file theo id duy nhất file đó
+      throw Error;
+    }
+
+    // Convert tags into array
+    const tags = post.tags?.replace(/ /g, "").split(",") || []; //sửa lại tags
+
+    // Create post
+    const newPost = await databases.createDocument(
+      appwriteConfig.databasesId, // id của db appwrite
+      appwriteConfig.postCollectionId, // id của bảng post appwrite
+      ID.unique(), //id bài post là duy nhất
+      {
+        creator: post.userId,
+        caption: post.caption,
+        imageUrl: fileUrl,
+        imageId: uploadedFile.$id,
+        location: post.location,
+        tags: tags,
+      } // các thông tin chuyền lên
+    );
+    if (!newPost) {
+      //nếu ko tạo được thì xóa file
+      await deleteFile(uploadedFile.$id);
+      throw Error;
+    }
+
+    return newPost;
   } catch (error) {
     console.log(error);
   }
